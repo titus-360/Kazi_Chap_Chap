@@ -1,6 +1,9 @@
 package com.job_portal.jobportal.models
 
 import jakarta.persistence.*
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.userdetails.UserDetails
 
 /**
  *
@@ -17,7 +20,7 @@ data class User(
     val id: Long? = null,
 
     @Column(name = "username")
-    val username: String = "",
+    val userName: String = "",
 
     @Column(name = "email")
     val email: String = "",
@@ -26,7 +29,7 @@ data class User(
     val phoneNumber: String = "",
 
     @Column(name = "password")
-    val password: String = "",
+    val userPassword: String = "",
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -36,4 +39,15 @@ data class User(
     )
     val roles: Set<Role> = setOf()
 
-)
+) : UserDetails {
+    override fun getAuthorities(): Collection<GrantedAuthority> {
+        return roles.map { SimpleGrantedAuthority(it.name) }
+    }
+
+    override fun getPassword(): String = userPassword
+    override fun getUsername(): String = userName
+    override fun isAccountNonExpired(): Boolean = true
+    override fun isAccountNonLocked(): Boolean = true
+    override fun isCredentialsNonExpired(): Boolean = true
+    override fun isEnabled(): Boolean = true
+}

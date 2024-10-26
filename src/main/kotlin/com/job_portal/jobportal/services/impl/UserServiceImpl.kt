@@ -6,6 +6,7 @@ import com.job_portal.jobportal.repositories.RoleRepository
 import com.job_portal.jobportal.repositories.UserRepository
 import com.job_portal.jobportal.services.UserService
 import org.slf4j.LoggerFactory
+import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
 
@@ -34,16 +35,19 @@ class UserServiceImpl(
         val userRole = roleRepository.findByName(roleName) ?: throw RuntimeException("Role not found!")
 
         val user = User(
-            username = signUpRequestDto.username,
+            userName = signUpRequestDto.username,
             email = signUpRequestDto.email,
-            password = bCryptPasswordEncoder.encode(signUpRequestDto.password),
+            userPassword = bCryptPasswordEncoder.encode(signUpRequestDto.password),
             roles = setOf(userRole)
         )
         return userRepository.save(user)
     }
 
-    override fun existsByUsername(signUpRequestDto: SignUpRequestDto): org.springframework.security.core.userdetails.User {
-        TODO("Not yet implemented")
+    override fun existsByUsername(username: String): User {
+        val user = userRepository.findByUsername(username)
+            ?: throw UsernameNotFoundException("User not found with username: ${username}")
+
+        return user
     }
 
 

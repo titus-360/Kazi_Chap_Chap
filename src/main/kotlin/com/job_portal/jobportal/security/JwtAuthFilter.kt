@@ -1,6 +1,5 @@
 package com.job_portal.jobportal.security
 
-import com.job_portal.jobportal.dtos.SignUpRequestDto
 import com.job_portal.jobportal.services.impl.CustomUserDetailsService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -27,18 +26,11 @@ class JwtAuthFilter(
         val token = getJwtFromRequest(request)
         if (token != null && jwtTokenProvider.validateJwtToken(token)) {
             val username = jwtTokenProvider.getUserNameFromJwtToken(token)
-            val signUpRequestDto = username?.let {
-                SignUpRequestDto(
-                    username = it,
-                    email = "",
-                    phoneNumber = "",
-                    password = "",
-                    roles = ""
-                )
+            if (username != null) {
+                val userDetails = userDetailsService.existsByUsername(username)
+                val authentication = UsernamePasswordAuthenticationToken(userDetails, null, userDetails.authorities)
+                SecurityContextHolder.getContext().authentication = authentication
             }
-            val userDetails = signUpRequestDto?.let { userDetailsService.existsByUsername(it) }
-            SecurityContextHolder.getContext().authentication =
-                UsernamePasswordAuthenticationToken(userDetails, null, userDetails?.authorities)
         }
         filterChain.doFilter(request, response)
     }
