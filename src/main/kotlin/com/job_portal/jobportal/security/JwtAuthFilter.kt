@@ -1,11 +1,14 @@
 package com.job_portal.jobportal.security
 
-import com.job_portal.jobportal.services.impl.CustomUserDetailsService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Lazy
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
 
@@ -13,21 +16,27 @@ import org.springframework.web.filter.OncePerRequestFilter
  *
  * @author Titus Murithi Bundi
  */
+@Component
 class JwtAuthFilter(
     private val jwtTokenProvider: JwtTokenProvider,
-    private val userDetailsService: CustomUserDetailsService
+    @Lazy private val userDetailsService: UserDetailsService  // Inject UserDetailsService
 ) : OncePerRequestFilter() {
+
+    private val logger = LoggerFactory.getLogger(JwtAuthFilter::class.java)
 
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
+        logger.info("Filtering request: ${request.requestURI}")
         val token = getJwtFromRequest(request)
         if (token != null && jwtTokenProvider.validateJwtToken(token)) {
             val username = jwtTokenProvider.getUserNameFromJwtToken(token)
             if (username != null) {
-                val userDetails = userDetailsService.existsByUsername(username)
+                logger.info("Authenticating user: $username")
+                // Fetch UserDetails using UserDetailsService
+                val userDetails = userDetailsService.loadUserByUsername(username)
                 val authentication = UsernamePasswordAuthenticationToken(userDetails, null, userDetails.authorities)
                 SecurityContextHolder.getContext().authentication = authentication
             }
@@ -40,3 +49,5 @@ class JwtAuthFilter(
         return if (bearerToken != null && bearerToken.startsWith("Bearer ")) bearerToken.substring(7) else null
     }
 }
+
+

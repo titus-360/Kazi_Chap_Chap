@@ -1,5 +1,6 @@
 package com.job_portal.jobportal.controllers
 
+import com.job_portal.jobportal.dtos.LoginRequestDto
 import com.job_portal.jobportal.dtos.LoginResponseDto
 import com.job_portal.jobportal.dtos.SignUpRequestDto
 import com.job_portal.jobportal.models.User
@@ -34,23 +35,23 @@ class UserController(
     }
 
     @PostMapping("/signin")
-    fun login(@RequestBody signUpRequestDto: SignUpRequestDto): ResponseEntity<LoginResponseDto> {
+    fun login(@RequestBody loginRequestDto: LoginRequestDto): ResponseEntity<LoginResponseDto> {
         return try {
             val authentication: Authentication = authenticationManager.authenticate(
-                UsernamePasswordAuthenticationToken(signUpRequestDto.username, signUpRequestDto.password)
+                UsernamePasswordAuthenticationToken(loginRequestDto.username, loginRequestDto.password)
             )
 
-            // Instead of casting, fetch user details using the username
-            val userDetails = userService.existsByUsername(signUpRequestDto.username)
+            // Retrieve user details directly without casting
+            val userDetails = userService.existsByUsername(loginRequestDto.username) as User
 
-            // If successful, generate JWT token
-            val token = jwtTokenProvider.generateJwtToken(authentication.name)
+            // Generate JWT token
+            val token = jwtTokenProvider.generateJwtToken(userDetails.username)
 
             val response = LoginResponseDto(
                 token = token,
                 username = userDetails.username,
-                roles = (userDetails as User).roles.map { it.name },
-                phoneNumber = (userDetails as User).phoneNumber
+                roles = userDetails.roles.map { it.name },
+                phoneNumber = userDetails.phoneNumber
             )
 
             ResponseEntity.ok(response)
@@ -58,5 +59,6 @@ class UserController(
             ResponseEntity.status(401).body(LoginResponseDto("", "", emptyList(), ""))
         }
     }
+
 
 }

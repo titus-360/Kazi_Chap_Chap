@@ -26,12 +26,8 @@ class JwtTokenProvider {
     private val key by lazy { Keys.hmacShaKeyFor(jwtSecret.toByteArray(StandardCharsets.UTF_8)) }
 
     fun generateJwtToken(userName: String): String {
-        return Jwts.builder()
-            .setSubject(userName)
-            .setIssuedAt(Date())
-            .setExpiration(Date(System.currentTimeMillis() + jwtExpirationInMs))
-            .signWith(key)
-            .compact()
+        return Jwts.builder().setSubject(userName).setIssuedAt(Date())
+            .setExpiration(Date(System.currentTimeMillis() + jwtExpirationInMs)).signWith(key).compact()
     }
 
     fun getUserNameFromJwtToken(token: String): String? {
@@ -39,14 +35,15 @@ class JwtTokenProvider {
     }
 
     fun validateJwtToken(authToken: String): Boolean {
-        try {
+        return try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(authToken)
-            return true
+            true
         } catch (e: Exception) {
-            logger.error("Invalid JWT token -> Message: {}", e)
+            logger.error("Invalid JWT token -> Message: {}", e.message)  // Log only the message to reduce logging depth
+            false
         }
-        return false
     }
+
 
     companion object {
         private val logger: Logger = LoggerFactory.getLogger(JwtTokenProvider::class.java)

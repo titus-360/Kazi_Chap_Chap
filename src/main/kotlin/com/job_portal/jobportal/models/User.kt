@@ -1,5 +1,6 @@
 package com.job_portal.jobportal.models
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.*
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
@@ -19,6 +20,7 @@ data class User(
     @Column(name = "id")
     val id: Long? = null,
 
+    @JsonIgnore
     @Column(name = "username")
     val userName: String = "",
 
@@ -28,9 +30,11 @@ data class User(
     @Column(name = "phonenumber")
     val phoneNumber: String = "",
 
+    @JsonIgnore
     @Column(name = "password")
     val userPassword: String = "",
 
+    @JsonIgnore
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "user_roles",

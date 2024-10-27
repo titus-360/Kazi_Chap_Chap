@@ -2,6 +2,9 @@ spring:
   application:
     name: JobPortal
 
+  main:
+    allow-circular-references: true
+
   datasource:
     url: jdbc:postgresql://localhost:5432/jobportal
     username: titus
@@ -15,10 +18,12 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
 jwt:
   secret: vkdy+vIJzGMEvl2A//Uv2FfXZ8/Wa9SJeiHnS0DA4yg=
   expiration: 3600000
   tokenPrefix: Bearer
   headerString: Authorization
+
 server:
   port: 60289
