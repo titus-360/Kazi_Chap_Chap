@@ -4,13 +4,16 @@ import com.job_portal.jobportal.dtos.LoginRequestDto
 import com.job_portal.jobportal.dtos.LoginResponseDto
 import com.job_portal.jobportal.dtos.SignUpRequestDto
 import com.job_portal.jobportal.models.User
-import com.job_portal.jobportal.security.JwtTokenProvider
-import com.job_portal.jobportal.services.UserService
+import com.job_portal.jobportal.repositories.RoleRepository
+import com.job_portal.jobportal.repositories.UserRepository
+import com.job_portal.jobportal.security.JWTGenerator
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.core.Authentication
-import org.springframework.security.core.AuthenticationException
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.core.userdetails.UsernameNotFoundException
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -23,42 +26,57 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/auth")
 class UserController(
-    private val userService: UserService,
     private val authenticationManager: AuthenticationManager,
-    private val jwtTokenProvider: JwtTokenProvider
+    private val userRepository: UserRepository,
+    private val roleRepository: RoleRepository,
+    private val passwordEncoder: PasswordEncoder,
+    private val jwtGenerator: JWTGenerator
 ) {
 
-    @PostMapping("/signup")
-    fun registerUser(@RequestBody signUpRequestDto: SignUpRequestDto): ResponseEntity<User> {
-        val user = userService.registerUser(signUpRequestDto)
-        return ResponseEntity.ok(user)
+
+    @PostMapping("login")
+    fun login(@RequestBody loginDto: LoginRequestDto): ResponseEntity<LoginResponseDto> {
+        val authentication = authenticationManager.authenticate(
+            UsernamePasswordAuthenticationToken(
+                loginDto.username,
+                loginDto.password
+            )
+        )
+        SecurityContextHolder.getContext().authentication = authentication
+        val token = jwtGenerator.generateToken(authentication)
+        val user = userRepository.findByUserName(loginDto.username)
+            ?: throw UsernameNotFoundException("User not found with username: ${loginDto.username}")
+
+        return ResponseEntity(
+            LoginResponseDto(
+                token,
+                loginDto.username,
+                authentication.authorities.map { it.authority },
+                user.phoneNumber
+            ), HttpStatus.OK
+        )
     }
 
-    @PostMapping("/signin")
-    fun login(@RequestBody loginRequestDto: LoginRequestDto): ResponseEntity<LoginResponseDto> {
-        return try {
-            val authentication: Authentication = authenticationManager.authenticate(
-                UsernamePasswordAuthenticationToken(loginRequestDto.username, loginRequestDto.password)
+    @PostMapping("register")
+    fun register(@RequestBody registerDto: SignUpRequestDto): ResponseEntity<String> {
+        return if (userRepository.existsByUserName(registerDto.username)) {
+            ResponseEntity("Username is taken!", HttpStatus.BAD_REQUEST)
+        } else {
+            val roles = registerDto.roles.split(",").map { roleName ->
+                roleRepository.findByName(roleName)
+                    ?: throw IllegalArgumentException("Role $roleName not found!")
+            }.toSet()
+
+            val user = User(
+                userName = registerDto.username,
+                email = registerDto.email,
+                phoneNumber = registerDto.phoneNumber,
+                userPassword = passwordEncoder.encode(registerDto.password),
+                roles = roles
             )
-
-            // Retrieve user details directly without casting
-            val userDetails = userService.existsByUsername(loginRequestDto.username) as User
-
-            // Generate JWT token
-            val token = jwtTokenProvider.generateJwtToken(userDetails.username)
-
-            val response = LoginResponseDto(
-                token = token,
-                username = userDetails.username,
-                roles = userDetails.roles.map { it.name },
-                phoneNumber = userDetails.phoneNumber
-            )
-
-            ResponseEntity.ok(response)
-        } catch (e: AuthenticationException) {
-            ResponseEntity.status(401).body(LoginResponseDto("", "", emptyList(), ""))
+            userRepository.save(user)
+            ResponseEntity("User registered success!", HttpStatus.OK)
         }
     }
-
 
 }

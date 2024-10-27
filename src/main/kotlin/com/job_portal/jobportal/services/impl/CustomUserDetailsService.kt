@@ -1,35 +1,35 @@
-//package com.job_portal.jobportal.services.impl
-//
-//import com.job_portal.jobportal.dtos.SignUpRequestDto
-//import com.job_portal.jobportal.models.User
-//import com.job_portal.jobportal.repositories.UserRepository
-//import com.job_portal.jobportal.services.UserService
-//import org.slf4j.LoggerFactory
-//import org.springframework.security.core.userdetails.UsernameNotFoundException
-//import org.springframework.stereotype.Service
-//
-///**
-// *
-// * @author Titus Murithi Bundi
-// */
-//@Service
-//class CustomUserDetailsService(private val userRepository: UserRepository) : UserService {
-//
-//    private val logger = LoggerFactory.getLogger(UserServiceImpl::class.java)
-//
-//    override fun existsByUsername(userName: String): User {
-//        logger.info("Checking if user exists by username: $userName")
-//        val user = userRepository.findByUserName(userName)
-//            ?: throw UsernameNotFoundException("User not found with username: $userName")
-//        return user
-//    }
-//
-//    override fun registerUser(signUpRequestDto: SignUpRequestDto): User {
-//        TODO("Not yet implemented")
-//    }
-//
-//
-//    override fun existsByEmail(email: String): Boolean {
-//        TODO("Not yet implemented")
-//    }
-//}
+package com.job_portal.jobportal.services.impl
+
+import com.job_portal.jobportal.models.Role
+import com.job_portal.jobportal.repositories.UserRepository
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.security.core.userdetails.UsernameNotFoundException
+import org.springframework.stereotype.Service
+
+/**
+ *
+ * @author Titus Murithi Bundi
+ */
+@Service
+class CustomUserDetailsService @Autowired constructor(
+    private val userRepository: UserRepository
+) : UserDetailsService {
+
+    override fun loadUserByUsername(username: String): UserDetails {
+        val user = userRepository.findByUserName(username)
+            ?: throw UsernameNotFoundException("User Not Found with username: $username")
+        return org.springframework.security.core.userdetails.User(
+            user.username,
+            user.password,
+            mapRolesToAuthorities(user.roles)
+        )
+    }
+
+    private fun mapRolesToAuthorities(roles: Set<Role>): Collection<GrantedAuthority> {
+        return roles.map { SimpleGrantedAuthority(it.name) }
+    }
+}

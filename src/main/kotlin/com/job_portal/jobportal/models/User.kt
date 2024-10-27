@@ -22,17 +22,17 @@ data class User(
 
     @JsonIgnore
     @Column(name = "username")
-    val userName: String = "",
+    var userName: String = "",
 
     @Column(name = "email")
-    val email: String = "",
+    var email: String = "",
 
     @Column(name = "phonenumber")
-    val phoneNumber: String = "",
+    var phoneNumber: String = "",
 
     @JsonIgnore
     @Column(name = "password")
-    val userPassword: String = "",
+    var userPassword: String = "",
 
     @JsonIgnore
     @ManyToMany(fetch = FetchType.EAGER)
@@ -42,7 +42,6 @@ data class User(
         inverseJoinColumns = [JoinColumn(name = "role_id")]
     )
     val roles: Set<Role> = setOf()
-
 ) : UserDetails {
     override fun getAuthorities(): Collection<GrantedAuthority> {
         return roles.map { SimpleGrantedAuthority(it.name) }
