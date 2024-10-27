@@ -1,13 +1,13 @@
 package com.job_portal.jobportal.security
 
+import com.job_portal.jobportal.services.UserService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.apache.catalina.core.ApplicationContext
 import org.slf4j.LoggerFactory
-import org.springframework.context.annotation.Lazy
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
@@ -19,7 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter
 @Component
 class JwtAuthFilter(
     private val jwtTokenProvider: JwtTokenProvider,
-    @Lazy private val userDetailsService: UserDetailsService  // Inject UserDetailsService
+    private val applicationContext: ApplicationContext // Inject the ApplicationContext instead of UserService
 ) : OncePerRequestFilter() {
 
     private val logger = LoggerFactory.getLogger(JwtAuthFilter::class.java)
@@ -35,8 +35,9 @@ class JwtAuthFilter(
             val username = jwtTokenProvider.getUserNameFromJwtToken(token)
             if (username != null) {
                 logger.info("Authenticating user: $username")
-                // Fetch UserDetails using UserDetailsService
-                val userDetails = userDetailsService.loadUserByUsername(username)
+                // Retrieve UserService bean from the application context
+                val userService = applicationContext.getBean(UserService::class.java)
+                val userDetails = userService.existsByUsername(username)
                 val authentication = UsernamePasswordAuthenticationToken(userDetails, null, userDetails.authorities)
                 SecurityContextHolder.getContext().authentication = authentication
             }
@@ -49,5 +50,8 @@ class JwtAuthFilter(
         return if (bearerToken != null && bearerToken.startsWith("Bearer ")) bearerToken.substring(7) else null
     }
 }
+
+
+
 
 
