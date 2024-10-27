@@ -14,7 +14,7 @@ class DatabaseInitializer(private val roleRepository: RoleRepository) {
 
     @PostConstruct
     fun init() {
-        Role.values().forEach { roleEnum ->
+        Role.entries.forEach { roleEnum ->
             if (roleRepository.findByName(roleEnum.name) == null) {
                 val role = RoleEntity(name = roleEnum.name)
                 roleRepository.save(role)

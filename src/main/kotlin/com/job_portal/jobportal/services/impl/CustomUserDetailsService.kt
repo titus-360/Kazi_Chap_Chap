@@ -19,9 +19,9 @@ class CustomUserDetailsService @Autowired constructor(
     private val userRepository: UserRepository
 ) : UserDetailsService {
 
-    override fun loadUserByUsername(username: String): UserDetails {
-        val user = userRepository.findByUserName(username)
-            ?: throw UsernameNotFoundException("User Not Found with username: $username")
+    override fun loadUserByUsername(email: String): UserDetails {
+        val user = userRepository.findByEmail(email)
+            ?: throw UsernameNotFoundException("User Not Found with username: $email")
         return org.springframework.security.core.userdetails.User(
             user.username,
             user.password,

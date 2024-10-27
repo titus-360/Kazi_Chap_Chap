@@ -38,19 +38,19 @@ class UserController(
     fun login(@RequestBody loginDto: LoginRequestDto): ResponseEntity<LoginResponseDto> {
         val authentication = authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken(
-                loginDto.username,
+                loginDto.email,
                 loginDto.password
             )
         )
         SecurityContextHolder.getContext().authentication = authentication
         val token = jwtGenerator.generateToken(authentication)
-        val user = userRepository.findByUserName(loginDto.username)
-            ?: throw UsernameNotFoundException("User not found with username: ${loginDto.username}")
+        val user = userRepository.findByEmail(loginDto.email)
+            ?: throw UsernameNotFoundException("User not found with username: ${loginDto.email}")
 
         return ResponseEntity(
             LoginResponseDto(
                 token,
-                loginDto.username,
+                loginDto.email,
                 authentication.authorities.map { it.authority },
                 user.phoneNumber
             ), HttpStatus.OK
@@ -59,23 +59,31 @@ class UserController(
 
     @PostMapping("register")
     fun register(@RequestBody registerDto: SignUpRequestDto): ResponseEntity<String> {
-        return if (userRepository.existsByUserName(registerDto.username)) {
-            ResponseEntity("Username is taken!", HttpStatus.BAD_REQUEST)
-        } else {
-            val roles = registerDto.roles.split(",").map { roleName ->
-                roleRepository.findByName(roleName)
-                    ?: throw IllegalArgumentException("Role $roleName not found!")
-            }.toSet()
+        return when {
+            userRepository.existsByUserName(registerDto.username) -> {
+                ResponseEntity("Username is taken!", HttpStatus.BAD_REQUEST)
+            }
 
-            val user = User(
-                userName = registerDto.username,
-                email = registerDto.email,
-                phoneNumber = registerDto.phoneNumber,
-                userPassword = passwordEncoder.encode(registerDto.password),
-                roles = roles
-            )
-            userRepository.save(user)
-            ResponseEntity("User registered success!", HttpStatus.OK)
+            userRepository.existsByEmail(registerDto.email) -> {
+                ResponseEntity("Email is already in use!", HttpStatus.BAD_REQUEST)
+            }
+
+            else -> {
+                val roles = registerDto.roles.split(",").map { roleName ->
+                    roleRepository.findByName(roleName)
+                        ?: throw IllegalArgumentException("Role $roleName not found!")
+                }.toSet()
+
+                val user = User(
+                    userName = registerDto.username,
+                    email = registerDto.email,
+                    phoneNumber = registerDto.phoneNumber,
+                    userPassword = passwordEncoder.encode(registerDto.password),
+                    roles = roles
+                )
+                userRepository.save(user)
+                ResponseEntity("User registered successfully!", HttpStatus.OK)
+            }
         }
     }
 
