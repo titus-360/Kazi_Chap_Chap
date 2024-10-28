@@ -12,14 +12,11 @@ import org.springframework.stereotype.Service
 @Service
 class OtpEmailVerification(private val mailSender: JavaMailSender) {
     fun sendVerificationEmail(to: String, otp: String) {
-
         val message: MimeMessage = mailSender.createMimeMessage()
         val helper = MimeMessageHelper(message, true)
-
         helper.setTo(to)
         helper.setSubject("Account Verification")
         helper.setText("Your OTP for account verification is: $otp", true)
-
         mailSender.send(message)
     }
 }
