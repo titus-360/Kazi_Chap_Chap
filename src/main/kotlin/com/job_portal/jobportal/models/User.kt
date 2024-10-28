@@ -41,7 +41,10 @@ data class User(
         joinColumns = [JoinColumn(name = "user_id")],
         inverseJoinColumns = [JoinColumn(name = "role_id")]
     )
-    val roles: Set<Role> = setOf()
+    val roles: Set<Role> = setOf(),
+
+    @Column(name = "enabled")
+    var enabled: Boolean = false
 ) : UserDetails {
     override fun getAuthorities(): Collection<GrantedAuthority> {
         return roles.map { SimpleGrantedAuthority(it.name) }

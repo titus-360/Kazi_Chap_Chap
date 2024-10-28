@@ -27,3 +27,12 @@ jwt:
 
 server:
   port: 60289
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: murithititus510@gmail.com
+    password: eokb jcuy mgtl tswm
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true

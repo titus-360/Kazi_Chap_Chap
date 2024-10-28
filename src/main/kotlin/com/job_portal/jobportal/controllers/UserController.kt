@@ -4,8 +4,11 @@ import com.job_portal.jobportal.dtos.LoginRequestDto
 import com.job_portal.jobportal.dtos.LoginResponseDto
 import com.job_portal.jobportal.dtos.SignUpRequestDto
 import com.job_portal.jobportal.models.User
+import com.job_portal.jobportal.models.VerificationToken
+import com.job_portal.jobportal.notifications.OtpEmailVerification
 import com.job_portal.jobportal.repositories.RoleRepository
 import com.job_portal.jobportal.repositories.UserRepository
+import com.job_portal.jobportal.repositories.VerificationTokenRepository
 import com.job_portal.jobportal.security.JWTGenerator
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -14,10 +17,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.password.PasswordEncoder
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
+import java.util.*
 
 /**
  *
@@ -30,7 +31,9 @@ class UserController(
     private val userRepository: UserRepository,
     private val roleRepository: RoleRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val jwtGenerator: JWTGenerator
+    private val jwtGenerator: JWTGenerator,
+    private val verificationTokenRepository: VerificationTokenRepository,
+    private val emailVerificationService: OtpEmailVerification
 ) {
 
 
@@ -38,8 +41,7 @@ class UserController(
     fun login(@RequestBody loginDto: LoginRequestDto): ResponseEntity<LoginResponseDto> {
         val authentication = authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken(
-                loginDto.email,
-                loginDto.password
+                loginDto.email, loginDto.password
             )
         )
         SecurityContextHolder.getContext().authentication = authentication
@@ -49,10 +51,7 @@ class UserController(
 
         return ResponseEntity(
             LoginResponseDto(
-                token,
-                loginDto.email,
-                authentication.authorities.map { it.authority },
-                user.phoneNumber
+                token, loginDto.email, authentication.authorities.map { it.authority }, user.phoneNumber
             ), HttpStatus.OK
         )
     }
@@ -70,8 +69,7 @@ class UserController(
 
             else -> {
                 val roles = registerDto.roles.split(",").map { roleName ->
-                    roleRepository.findByName(roleName)
-                        ?: throw IllegalArgumentException("Role $roleName not found!")
+                    roleRepository.findByName(roleName) ?: throw IllegalArgumentException("Role $roleName not found!")
                 }.toSet()
 
                 val user = User(
@@ -79,12 +77,49 @@ class UserController(
                     email = registerDto.email,
                     phoneNumber = registerDto.phoneNumber,
                     userPassword = passwordEncoder.encode(registerDto.password),
-                    roles = roles
+                    roles = roles,
+                    enabled = false // Set enabled to false initially
                 )
                 userRepository.save(user)
-                ResponseEntity("User registered successfully!", HttpStatus.OK)
+
+                // Generate verification token
+                val otp = generateOtp(user.phoneNumber)
+                val expiryDate = System.currentTimeMillis() + 5 * 60 * 1000 // 5 minutes in milliseconds
+                val verificationToken = VerificationToken(token = otp, expiryDate = expiryDate, user = user)
+                verificationTokenRepository.save(verificationToken)
+
+                // Send verification email (implement email sending logic)
+                emailVerificationService.sendVerificationEmail(user.email, otp)
+
+                ResponseEntity(
+                    "User registered successfully! Please check your email to verify your account.", HttpStatus.OK
+                )
             }
         }
     }
 
+    fun generateOtp(phoneNumber: String): String {
+        val otp = (100000..999999).random().toString()
+        // Send OTP to phoneNumber (implement OTP sending logic)
+        return otp
+    }
+
+
+    @PostMapping("verify")
+    fun verifyAccount(@RequestParam("otp") otp: String): ResponseEntity<String> {
+        val verificationToken = verificationTokenRepository.findByToken(otp) ?: return ResponseEntity(
+            "Invalid OTP!", HttpStatus.BAD_REQUEST
+        )
+
+        val user = verificationToken.user
+        if (verificationToken.expiryDate < System.currentTimeMillis()) {
+            return ResponseEntity("OTP expired!", HttpStatus.BAD_REQUEST)
+        }
+
+        user.enabled = true
+        userRepository.save(user)
+        verificationTokenRepository.delete(verificationToken)
+
+        return ResponseEntity("Account verified successfully!", HttpStatus.OK)
+    }
 }
