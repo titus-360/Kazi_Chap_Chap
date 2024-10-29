@@ -5,7 +5,10 @@ import com.job_portal.jobportal.models.User
 import com.job_portal.jobportal.repositories.UserRepository
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
+import org.junit.jupiter.api.assertThrows
+import org.mockito.Mockito.*
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.userdetails.UsernameNotFoundException
 
 /**
  *
@@ -19,7 +22,7 @@ class CustomUserDetailsServiceTest {
     @Test
     fun loadUserByUsername_UserExists_ReturnsUserDetails() {
         val roles = setOf(Role(1L, "ROLE_USER"))
-        val user = User(2L, "test@example.com", "password", roles)
+        val user = User(2L, "test@example.com", "password", roles.toString())
         `when`(userRepository.findByEmail("test@example.com")).thenReturn(user)
 
         val userDetails = customUserDetailsService.loadUserByUsername("test@example.com")
@@ -40,8 +43,8 @@ class CustomUserDetailsServiceTest {
 
     @Test
     fun loadUserByUsername_UserHasMultipleRoles_ReturnsUserDetailsWithAllRoles() {
-        val roles = setOf(Role("ROLE_USER"), Role("ROLE_ADMIN"))
-        val user = User("admin@example.com", "adminpassword", roles)
+        val roles = setOf(Role(1L, "ROLE_USER"), Role(1L, "ROLE_ADMIN"))
+        val user = User(1L , "admin@example.com", "adminpassword", roles.toString())
         `when`(userRepository.findByEmail("admin@example.com")).thenReturn(user)
 
         val userDetails = customUserDetailsService.loadUserByUsername("admin@example.com")
