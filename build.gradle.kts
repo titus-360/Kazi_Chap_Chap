@@ -28,6 +28,8 @@ dependencies {
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     runtimeOnly("org.postgresql:postgresql")
 
+    /*ModelMapper*/
+    implementation("org.modelmapper:modelmapper:3.1.0")
     /*Spring mail*/
     implementation("org.springframework.boot:spring-boot-starter-mail")
 
